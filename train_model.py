@@ -99,3 +99,4 @@ sample = encode_app_input(92, 28, "no", "yes", "bad", "high")
 pred_probs = student.predict(sample)
 print("Prediction probs [low, high]:", pred_probs)
 print("Predicted class:", int(np.argmax(pred_probs, axis=1)[0]))
+# priject update
