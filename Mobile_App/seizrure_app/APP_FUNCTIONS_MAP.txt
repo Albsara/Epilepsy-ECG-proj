@@ -1,0 +1,100 @@
+================================================================================
+SEIZURE APP - COMPLETE FUNCTION ARCHITECTURE MAP
+================================================================================
+
+1. APP_CONTROLLER (COORDINATOR)
+Path: lib/shared/controllers/app_controller.dart
+Role: The central coordinator that delegates tasks to specialized controllers.
+
+- onInit(): Initializes the app and starts watching the Auth state.
+- _onUserChanged(user): Responds to login/logout by triggering profile loading.
+- refreshData(): Triggers a fresh reload of user profile data.
+- goNav(index): Updates the global navigation index (bottom nav).
+- toggleLang(): Switches the app locale between Arabic and English.
+- loadPatientHistory(uid): Loads detailed history/live data for a specific patient.
+- viewAllAlerts(ids): Loads combined alert history for a list of patient IDs.
+- makePhoneCall(phone): Sanitizes phone number and launches system dialer.
+- sendSms(phone): Sanitizes phone number and launches system SMS app.
+- saveProfile(...): Proxy to ProfileController.saveProfile.
+- linkPatient(uid): Proxy to ProfileController.linkPatient.
+- unlinkPatient(uid): Proxy to ProfileController.unlinkPatient.
+- toggleAlertHandled(...): Proxy to AlertsController.toggleAlertHandled.
+
+
+2. PROFILE_CONTROLLER (USER & RELATIONSHIPS)
+Path: lib/shared/controllers/profile_controller.dart
+Role: Manages profiles, patient-caregiver links, and identity data.
+
+- loadProfile(uid): Fetches user data from Firestore and identifies if Patient or Caregiver.
+- saveProfile(name, phone, ...): Updates user identity in Firestore.
+- linkPatient(patientId): Establishes a many-to-many relationship with a patient UID.
+- unlinkPatient(patientId): Safely removes a linked relationship using a WriteBatch.
+- _loadAssignedPatients(ids): Internal stream of patients assigned to a caregiver.
+- _loadAssignedCaregivers(ids): Internal stream of caregivers assigned to a patient.
+- updateProfileData(patient): Updates observable reactive variables with patient data.
+
+
+3. DASHBOARD_CONTROLLER (MONITORING & AI)
+Path: lib/shared/controllers/dashboard_controller.dart
+Role: Processes vitals, runs the AI model, and manages live monitoring.
+
+- _loadModel(): Asynchronously loads the model.json assets for AI detection.
+- listenToLiveData(uid): Subscribes to the RTDB stream for a specific patient.
+- _updateVitals(data): Maps raw RTDB data to reactive UI variables (BPM, HRV).
+- _evaluateDanger(data, uid): Runs the AI Evaluator; triggers alerts if detection is positive.
+- setAlertStatus(uid, status): Toggles the 'alert' field in RTDB to true on detection.
+
+
+4. ALERTS_CONTROLLER (SEIZURE HISTORY)
+Path: lib/shared/controllers/alerts_controller.dart
+Role: Manages history lists and handles the "Mark as Handled" logic.
+
+- listenToPatientAlerts(uid): Streams history for one patient (details view).
+- listenToAllAssignedAlerts(uids): Streams combined history for all linked patients.
+- toggleAlertHandled(pId, aId, status): Updates is_handled in Firestore AND resets RTDB 'alert' to false.
+  Used In: SeizureAlertTile (checkbox/switch).
+- _updateHistoryList(alerts, pId): Formats Firestore documents into a Map for UI display.
+
+
+5. FIRESTORE_SERVICE (DATA PERSISTENCE)
+Path: lib/shared/services/firestore_service.dart
+Role: Direct communication with Cloud Firestore.
+
+- getPatient(uid) / streamPatient(uid): Fetch/Listen to patient profile document.
+- getCaregiver(uid) / streamCaregiver(uid): Fetch/Listen to caregiver profile document.
+- streamPatientAlerts(uid): Listen to alerts sub-collection for a patient.
+- streamAllAlerts(): Collection group query to listen to ALL alerts globally.
+- addSeizureAlert(uid, alert): Create a new alert document in Firestore.
+- updateAlertHandled(pId, aId, status): Toggle the is_handled flag on a specific alert.
+- updatePatient(uid, data) / updateCaregiver(uid, data): Generic field updates.
+- linkCaregiverToPatient(pId, cId): Atomic batch to link IDs in both documents.
+- unlinkCaregiverFromPatient(pId, cId): Atomic batch to remove linked IDs.
+
+
+6. REALTIME_SERVICE (LIVE DATA)
+Path: lib/shared/services/realtime_service.dart
+Role: Direct communication with Firebase Realtime Database.
+
+- streamLiveData(uid): Listens to live vitals at 'live/$uid'.
+- updateLiveData(uid, data): Pushes new health data to the RTDB.
+- setAlertStatus(uid, status): Sets the 'alert' boolean field at 'live/$uid/alert'.
+
+
+7. BACKGROUND_MONITOR_SERVICE
+Path: lib/shared/services/background_monitor_service.dart
+Role: Background execution and AI monitoring when app is closed.
+
+- onStart(service): Main entry point for the background isolate.
+- _handleBackgroundSeizure(uid, data, db): Triggers emergency alerts from background.
+- _showLocalNotification(plugin, title, body): Displays high-priority OS notifications.
+- initializeService(): Configures the platform-specific background service settings.
+
+
+8. AUTH_CONTROLLER
+Path: lib/shared/controllers/auth_controller.dart
+Role: Manages Firebase Authentication state.
+
+- signIn(email, password): Authenticates user and stores credentials locally.
+- signOut(): Logs out and cleans up session data.
+- _loadStoredAuth(): Auto-login logic for returning users.
+================================================================================
